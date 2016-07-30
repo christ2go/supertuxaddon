@@ -14,6 +14,7 @@ from pprint import pprint
 from models import db
 import shutil
 import zipfile
+import requests, io
 import sexpr
 def create_app():
   app = Flask(__name__)
@@ -228,10 +229,36 @@ def add_version(username):
         elif request.form["sourcetype"] == "superdata":
             # Download from repo
             addonssrc = github.get("repos/SuperTux/addons-src/contents/")
-            for f in addonssrc:
-                if f["type"] == "dir" and f["name"] == request.form["import-folder"]:
-                    print(f)
+            # Create directory, download zip , then only unpack appropriate folder
+            dirname = os.path.join(app.config['UPLOAD_FOLDER'], addon.name + request.form["versionnumb"])
+            if os.path.isdir(dirname):
+                shutil.rmtree(dirname)
+            os.mkdir(dirname)
+            zip_file_url = "https://github.com/SuperTux/addons-src/archive/master.zip"
 
+            with open(dirname+'/addons.zip', 'wb') as handle:
+                response = requests.get(zip_file_url)
+
+                if not response.ok:
+                    print("Err")
+                # Something went wrong
+
+                for block in response.iter_content(1024):
+                    handle.write(block)
+            with zipfile.ZipFile(dirname+'/addons.zip',"r") as z:
+                print("****")
+                print(z.namelist())
+                for item in z.namelist():
+                    if len(item.split("/")) == 3 and item[-1]=='/':
+                        print(item)
+                    if item.startswith("addons-src-master/"+request.form["import-folder"]+"/"):
+                        print("Found file")
+                        z.extract(item,path=dirname)
+                        if item == "addons-src-master/"+request.form["import-folder"]+"/":
+                            filename = os.path.join(dirname,item)
+                print("addons-src-master/"+request.form["import-folder"]+"/")
+                print(filename)
+                print("Done")
         else:
             return jsonify({"err": "Source unknown!"})
 
