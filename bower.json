@@ -1,0 +1,23 @@
+{
+  "name": "supertuxaddon",
+  "authors": [
+    "christ2go"
+  ],
+  "description": "",
+  "main": "",
+  "license": "GPL",
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "speakingurl": "^9.0.0",
+    "bootstrap-select": "^1.10.0",
+    "parsleyjs": "^2.4.3"
+  }
+}

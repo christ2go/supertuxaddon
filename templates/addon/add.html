@@ -1,0 +1,92 @@
+{%- extends "base.html" %}
+{% block page %}
+    <h1>Add a new addon!</h1>
+    <p>
+        You can select between <i>managed</i> and <i>classic</i> mode. In managed mode, your don't have to worry about
+        keeping
+        the ".nfo"-file (it's the file, in which everything about your addon is stored), it is generated automatically.
+        In classic mode, you have to supply a .nfo file with every version of your addon.
+    </p>
+    <form id="addaddon" class="form" method="post" data-parsley-validate>
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                General information about your addon.
+            </div>
+            <div class="panel-body">
+                <br/>
+                <div class="row">
+                    <div class="col-xs-9">
+                        <label> What type of addon is it?</label>
+                    </div>
+                    <div class="col-xs-3">
+                        <div class="form-group">
+                            <select name="type" class="selectpicker form-control ">
+                                <option value="world">World (Levelset)</option>
+                                <option value="lpack">Language package</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="addon-name">What is your addons name?</label>
+                    <input class="form-control" id="addon-name" name="addon-name" required data-parsley-namenotused></input>
+                </div>
+
+                <b>Your addon repos name will be: <span id="addon-name-speaking">None</span></b>
+
+                <div class="form-group">
+                    You can write a description of your addon in markdown format here.
+                    It will be shown on your addons webpage.
+                    <div class="form-group">
+                        <label for="comment">Description:</label>
+                        <textarea class="form-control" rows="5" name="description" id="description"></textarea>
+                    </div>
+                </div>
+
+
+            </div>
+
+
+        </div>
+        <div class="row">
+            <div class="col-md-9">
+                If you don't want to use <i>managed</i> mode, just deselect it and you're done!
+                <div class="form-group">
+                    <label for="checkbox1 ">
+                        Use managed mode
+                    </label>
+                    <input type="checkbox" id="c" name="managed-mode">
+
+                </div>
+            </div>
+        </div>
+
+        <div class="managed-only">
+            In <i>managed</i> mode you have to select a license for your project, and have to add an author.
+            <div class="form-group">
+                <label for="addon-license">Enter a license </label>
+                <input class="form-control" id="addon-license" name="addon-license"  data-parsley-validate-if-empty data-parsley-requiredon="checkbox1"    />
+                <span class="help-block">
+                    Possible licenses include GNU GPL, MIT license and many more. (Consult <a href="http://choosealicense.com/licenses/">choosealicense</a> if you don't know what to choose).
+                </span>
+
+            </div>
+            <p>
+            Last (but not least) your or the authors name (you should be the author, but just incase maybe others participated), is
+                needed.
+            <div class="form-group">
+                <label for="addon-license">Author's name </label>
+                <input class="form-control" id="addon-license" name="addon-license" data-parsley-validate-if-empty data-parsley-requiredon="checkbox1" />
+                <span class="help-block">
+                    Your or your teams name. (This name will be displayed in game)
+                </span>
+
+            </div>
+            </p>
+        </div>
+        <div class="form-group">
+            <input type="submit" class="btn btn-success" validate value="Create Addon"></div>
+        </div>
+
+    </form>
+{%- endblock %}

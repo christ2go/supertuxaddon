@@ -1,0 +1,55 @@
+{%- extends "base.html" %}
+{% block page %}
+    <div class="row">
+        <div class="col-md-4">
+            <img src="http://www.w3schools.com/bootstrap/cinqueterre.jpg" class="img-thumbnail" alt="Cinque Terre"
+                 width="304" height="236">
+            <h2>
+                <small>{{ username }}</small>
+            </h2>
+
+        </div>
+        <div class="col-md-8">
+            <h2>{{ username }}'s addons</h2>
+            <p>
+                Below you find a list of the user's currently registered addons. You can install them from the game
+                addon
+                manager.
+            </p>
+            <div class="panel panel-default">
+                <div class="panel-heading">Addons</div>
+                <div class="list-group">
+                    <table class="table">
+                        {% for addon in addons %}
+                            <tr>
+                                <td>
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                        <h5>
+                                            {% if addon.getType() == "world" %}
+                                                <i class="fa fa-book fa-2x" aria-hidden="true"></i>
+                                            {% endif %}
+                                            <a href="" style="color:black;">{{ addon.title }}</a></h5>
+                                        </div>
+                                        <div class="col-mg-4">
+                                        <br />
+                                            {% if addon.automaticmode %}
+                                                <div class="small"> managed mode</div>
+                                            {% else %}
+                                                <div class="small"> classic mode</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+                </table>
+                                </div>
+
+            </div>
+        </div>
+
+    </div>
+{% endblock %}

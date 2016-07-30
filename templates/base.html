@@ -1,0 +1,135 @@
+{# ``base.html`` is the template all our other templates derive from. While
+   Flask-Bootstrap ships with its own base, it is good form to create a custom
+   one for our app, as it allows customizing some aspects.
+
+   Deriving from bootstap/base.html gives us a basic page scaffoling.
+
+   You can find additional information about template inheritance at
+
+   http://jinja.pocoo.org/docs/templates/#template-inheritance
+#}
+{%- extends "bootstrap/base.html" %}
+
+{# We also set a default title, usually because we might forget to set one.
+   In our sample app, we will most likely just opt not to change it #}
+{% block title %}Sample App for Flask-Bootstrap{% endblock %}
+
+{# While we are at it, we also enable fixes for legacy browsers. First we
+   import the necessary macros: #}
+{% import "bootstrap/fixes.html" as fixes %}
+
+{# Then, inside the head block, we apply these. To not replace the header,
+   ``super()`` is used: #}
+{% block head %}
+    {{super()}}
+
+    {{fixes.ie8()}}
+
+    <!-- Latest compiled and minified CSS -->
+
+
+<!-- (Optional) Latest compiled and minified JavaScript translation files -->
+{%- endblock %}
+{% block scripts %}
+    {{super()}}
+
+    <script src="{{ url_for('bower.static', filename='bootstrap-switch/dist/js/bootstrap-switch.min.js') }}"></script>
+    <script src="{{ url_for('bower.static', filename='bootstrap-select/dist/js/bootstrap-select.min.js') }}"></script>
+    <script src="{{ url_for('bower.static', filename='parsleyjs/dist/parsley.min.js') }}"></script>
+    <script src="{{ url_for('bower.static', filename='bootstrap-filestyle/src/bootstrap-filestyle.min.js') }}"></script>
+    <script src="{{ url_for('bower.static', filename='blueimp-file-upload/js/jquery.fileupload.js') }}"></script>
+    <script src="{{ url_for('bower.static', filename='bootstrap3-dialog/dist/js/bootstrap-dialog.min.js') }}"></script>
+
+    <script type=text/javascript>
+          $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+    $(document).ready(function(){
+        $(":file").filestyle();
+    });
+
+
+    </script>
+
+    <script src="{{ url_for('static',filename='add.js') }}"></script>
+{% endblock %}
+{# Adding our own CSS files is also done here. Check the documentation at
+   http://pythonhosted.org/Flask-Bootstrap/basic-usage.html#available-blocks
+   for an overview. #}
+{% block styles -%}
+    {{super()}}  {# do not forget to call su
+    per or Bootstrap's own stylesheets
+                    will disappear! #}
+    <link rel="stylesheet" href="{{ url_for('bower.static', filename='bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.min.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('bower.static', filename='bootstrap-select/dist/css/bootstrap-select.min.css') }}" />
+
+    <link rel="stylesheet" href="{{ url_for('bower.static', filename="components-font-awesome/css/font-awesome.min.css") }}" />
+    <link rel="stylesheet" href="{{ url_for('bower.static', filename="bootstrap3-dialog/dist/css/bootstrap-dialog.min.css") }}" />
+
+{% endblock %}
+
+{# Finally, round things out with navigation #}
+{% block navbar %}
+          <nav class="navbar navbar-default">
+        <div class="container-fluid">
+          <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Supertux Level Index</a>
+          </div>
+          <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+              <li class=""><a href="{{ url_for('index') }}">Home</a></li>
+              <li><a href="#">Addonindex</a></li>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Your account <span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    {% if session["loggedin"] %}
+                   <li><a href="{{ url_for('user',username=g.user.nickname) }}"><i class="fa fa-user"></i> Profile Page</a> </li>
+                   <li><a href="{{ url_for('add_addon') }}"><i class="fa fa-plus"></i> Publish an addon</a></li>
+                  <li><a href="{{ url_for('add_version',username=g.user.nickname)}}"><i class="fa fa-refresh"></i> Add a new version of an existing addon</a></li>
+                    <li><a href="#"><i class="fa fa-eraser"></i>Delete an addon</a></li>
+                  {% else %}
+                        You need to be logged in, to see these.
+                    {% endif %}
+
+                </ul>
+              </li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                {%  if not session["loggedin"] %}
+              <li><a href="{{ url_for('login_gh') }}">Sign in with github</a></li>
+                {% else %}
+                <li><a href="{{ url_for('logout') }}">Logout </a></li>
+                {% endif %}
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div><!--/.container-fluid -->
+      </nav>
+{% endblock %}
+
+    {% block content %}
+        <div class="container">
+        <div>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+            {% if category == 'message' %}
+              <div class="alert alert-warning alert-dismissible" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            {% else %}
+              <div class="alert alert-{{ category }} alert-dismissible" role="alert">
+                  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            {% endif %}
+              {{ message }}
+            </div>
+        {% endfor %}
+      {% endif %}
+  {% endwith %}
+</div>
+            {% block page %}
+            {% endblock %}
+        </div>
+    {% endblock %}

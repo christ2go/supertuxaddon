@@ -1,0 +1,208 @@
+{%- extends "base.html" %}
+{% block scripts %}
+    {{ super() }}
+    <script>
+    // Variable to store your files
+        $(document).ready(function () {
+            $('input[type=file]').on('change', prepareUpload);
+
+            // Grab the files and set them to our variable
+            function prepareUpload(event)
+            {
+              files = event.target.files;
+            }
+
+            $("#newVersion").submit(function (e) {
+
+                e.preventDefault();
+                // Check if version number was supplied!
+                if ($("#versionnumb").val() == "") {
+                    formerror("Please enter a version number.");
+                    return;
+                }
+                var selected = $('.tab-pane.active').attr("id");
+                if (!/\d+(?:\.\d+)+/.test($("#versionnumb").val()))
+                {
+                     formerror("Your version number should use the standard Semantic Versioning Scheme.");
+                     return;
+                }
+
+
+                //
+                var dfn; // Variable for holding repository or folder name, only needed if import from github
+
+                if(selected == "http")
+                {
+                    // Check that a file was selected
+                    var filename = $("#addonfile").val();
+                    if(filename == "")
+                    {
+                        formerror("You must select a file to upload.");
+                        return;
+                    }
+                    // Check if the file is a zip file (judge by extension)
+                    ext = filename.split(".");
+                    ext = ext[ext.length-1];
+                    alert(ext);
+                    console.log(ext);
+                    if(!(ext == "zip" || ext == "7z"))
+                    {
+                        formerror("You are not using a correct archive format. \n Please note, that the file extension has to be zip or 7z!")
+                        return;
+                    }
+                }else if(selected == "superdata")
+                {
+                    dfn = $("#import-folder").val();
+                }else if(selected == "githubupl")
+                {
+                    dfn = $("#reposelect").val();
+                }
+
+                // File and / or repositories should be ok
+
+                // Check if at least one version was selected
+                var selectedVersion = $("#version-select option:selected");
+                if(selectedVersion.length == 0)
+                {
+                    formerror("You must select at least one compatible supertux version.");
+                    return;
+                }
+                // Check that an addon was selected
+                var selectedAddon = $("#addon-name option:selected").text();
+                // TODO What to do if they addon is named "Select an addon"
+
+                if(selectedAddon == $("#addon-name").attr("title"))
+                {
+                    formerror("You must select an addon!");
+                    return;
+                }
+                $("#sourcetype").val(selected);
+                console.log("Ok!");
+                    var formData = new FormData($(this)[0]);
+                formData["selected"] = selected;
+                    $.ajax({
+                        url: window.location.pathname,
+                        type: 'POST',
+                        data: formData,
+                        async: false,
+                        success: function (data) {
+                            alert(data);
+                            console.log(data);
+                        },
+                        cache: false,
+                        contentType: false,
+                        processData: false
+                    });
+
+    //return false;
+
+
+            });
+        });
+        var files;
+        function formerror(err)
+        {
+           BootstrapDialog.alert({
+            title: 'Form validation error',
+            message: err,
+            type: BootstrapDialog.TYPE_WARNING});
+
+        }
+        // Add events
+
+    </script>
+{% endblock %}
+{% block page %}
+    {% if addons|length == 0 %}
+
+    {% else %}
+    <h2>Add a new Addon version</h2>
+    <p>Here you can add a new Version of one  of your addon.
+    You can upload the addon archive directly, or a git commit from of your repositorys, or import from the supertux-data
+    repository. You then have to select the supertux versions, which your addon can be used with. </p>
+    <form id="newVersion" method="post">
+    <div class="panel panel-primary">
+        <div class=" panel-heading">
+            Information about the new version
+        </div>
+        <div class=" panel-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <label for="addon-name"> Select the Addon you want to update</label>
+                </div>
+                <div class="col-md-4">
+                    <select id="addon-name" name="addon-name" class="selectpicker" title="Select an addon">
+                        {% for addon in addons %}
+                            <option value="{{ addon.name }}">{{ addon.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+                <div class="form-group">
+                    <label for="addon-name">Enter the new version number</label>
+                    <input class="form-control" id="versionnumb" name="versionnumb" ></input>
+                    <div class="help-block">Please note, that the version number has to be unique.
+                        (You can't change a once published version)
+                    </div>
+                </div>
+        </div>
+    </div>
+    <p>
+    If your addon was created in classic mode, the version number supplied above <b>must</b> match the version number
+        given in the .nfo file. You can now import the addons version. Please note, that only import your own
+        github repositorys, if you would like to use a repository, which you don't own you have to fork it.
+    </p>
+    <ul class="nav nav-tabs">
+      <li class="active" ><a href="#http" data-toggle="tab"><i class="fa fa-upload" aria-hidden="true"></i>Upload via HTTP</a></li>
+      <li><a href="#superdata" data-toggle="tab"><i class="fa fa-linux" aria-hidden="true"></i>Import from <i>supertux-data</i></a></li>
+      <li><a href="#githubupl" data-toggle="tab"><i class="fa fa-github" aria-hidden="true"></i>Import from Github</a></li>
+    </ul>
+<div class="tab-content">
+  <div id="http" class="tab-pane fade in active">
+    <h3>Upload via HTTP</h3>
+    <p>Please select the archive (<b>*.zip</b> or <b>*.7z</b>) below. The rest will be taken care of!</p>
+								<div class="form-group">
+									<div class="row">
+										<div class="col-md-4">
+											<input type="file" class="filestyle" id="addonfile" name="addonfile" data-icon="false">
+										</div>
+									</div>
+								</div>
+  </div>
+  <div id="superdata" class="tab-pane fade">
+    <h3>Upload from supertux data</h3>
+    <p>Please select the folder name from below.</p>
+    <select class="selectpicker" name="import-folder" id="import-folder" data-live-search="true">
+        {% for dir in dirs %}
+            <option value="{{ dir }}">{{ dir }}</option>
+        {% endfor %}
+    </select>
+  </div>
+  <div id="githubupl" class="tab-pane fade">
+    <h3>Upload from your github repo</h3>
+    <p>There are some limitations to the github upload. You can only select a repo, the newest version is automatically
+    taken and zipped in order to create a supertux addon.
+    </p>
+    <select class="selectpicker" name="reposelect" id="reposelect" data-live-search="true">
+        {% for repo in repos %}
+            <option value="{{ repo }}">{{ repo }}</option>
+        {% endfor %}
+    </select>
+  </div>
+</div>
+<hr>
+
+
+    <p>
+    Please select the supertux version(s), which this version of the addon supports.
+    <select class="selectpicker" name="version-select" data-live-search="true" id="version-select" multiple>
+        {% for version in versions %}
+            <option value="{{ version }}">{{version}}</option>
+        {% endfor %}
+    </select>
+    </p>
+    <input type="hidden" name="sourcetype" id="sourcetype" />
+    <input type="submit" class="btn btn-warning" value="Publish new Version"></input>
+    </form>
+    {% endif %}
+{% endblock %}
