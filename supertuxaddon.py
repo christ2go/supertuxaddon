@@ -16,6 +16,7 @@ import shutil
 import zipfile
 import requests, io
 import sexpr
+import git
 def create_app():
   app = Flask(__name__)
   app.config.from_object('config')
@@ -223,9 +224,24 @@ def add_version(username):
             # Unzip (or un7zip) the file
             with zipfile.ZipFile(filename, 'r') as myzip:
                 fname = myzip.extractall(path=dirname)
-                return jsonify({"err":fname.filename})
+            filename = os.path.splitext(filename)[0]+"/"
+            #return jsonify({"err":fname.filename})
         elif request.form["sourcetype"] == "githubupl":
-            pass
+            print("Uploading from github")
+            repo = request.form["reposelect"]
+            #  #
+            repoapi = github.get("repos/%s/%s"%(g.user.nickname,repo))
+            pprint(repoapi)
+            dirname = os.path.join(app.config['UPLOAD_FOLDER'], addon.name + request.form["versionnumb"])
+            if os.path.isdir(dirname):
+                shutil.rmtree(dirname)
+            os.mkdir(dirname)
+            repo = git.Repo.init(dirname)
+            origin = repo.create_remote('origin', repoapi["git_url"])
+            origin.fetch()
+            origin.pull(origin.refs[0].remote_head)
+            filename = dirname
+            # Uploaded from github
         elif request.form["sourcetype"] == "superdata":
             # Download from repo
             addonssrc = github.get("repos/SuperTux/addons-src/contents/")
@@ -240,31 +256,24 @@ def add_version(username):
                 response = requests.get(zip_file_url)
 
                 if not response.ok:
-                    print("Err")
+                    return jsonify({"err":"Unable to fetch supertux/addons-src. Please upload manually (e.g. via ftp)"})
                 # Something went wrong
 
                 for block in response.iter_content(1024):
                     handle.write(block)
             with zipfile.ZipFile(dirname+'/addons.zip',"r") as z:
-                print("****")
-                print(z.namelist())
                 for item in z.namelist():
-                    if len(item.split("/")) == 3 and item[-1]=='/':
-                        print(item)
                     if item.startswith("addons-src-master/"+request.form["import-folder"]+"/"):
                         print("Found file")
                         z.extract(item,path=dirname)
                         if item == "addons-src-master/"+request.form["import-folder"]+"/":
                             filename = os.path.join(dirname,item)
-                print("addons-src-master/"+request.form["import-folder"]+"/")
-                print(filename)
-                print("Done")
         else:
             return jsonify({"err": "Source unknown!"})
 
         #### File is now uploaded #### => if managed mode it's nearly done, else check for md5 hash, version number
 
-
+        print(filename)
         # Finally zip and 7z the addon
         return "ok"
     # Check if user exists available
