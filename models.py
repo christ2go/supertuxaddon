@@ -55,8 +55,31 @@ class AddonVersion(db.Model):
     addon_id = db.Column(db.Integer, db.ForeignKey('addon.id'))
     version = db.Column(db.String(10))
     changes = db.Column(db.Text())
-    source = db.Column(db.Text())
+    license = db.Column(db.String(60))
+    author = db.Column(db.String(60))
+    int_version = db.Column(db.Integer)
+    files = db.relationship('AddonFiles', backref='addon',lazy='dynamic')
 
+    def generateNFO(self):
+        if not self.addon.automaticmode:
+            return None
+        nfo = """
+        (supertux-addoninfo
+          (id "%s")
+          (version %d)
+          (type "%s")
+          (title "%s")
+          (author "%s")
+          (license "%s"))
+
+        """%(self.addon.name,self.int_version,str(self.addon.type),self.addon.title,self.addon.author,self.addon.license)
+        return nfo
+class AddonFiles(db.Model):
+    __tablename__ = "addon_files"
+    id = db.Column(db.Integer, primary_key=True)
+    addon_id =db.Column(db.Integer,db.ForeignKey('addon_version.id'))
+    format = db.Column(db.String(20)) # File extension
+    path = db.Column(db.String(40))
 class SuperTuxVersions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     version = db.Column(db.String(10))

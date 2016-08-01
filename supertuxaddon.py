@@ -17,6 +17,30 @@ import zipfile
 import requests, io
 import sexpr
 import git
+import glob
+
+def zipdir(path, zipf,prefix=""):
+    # Iterate all the directories and files
+    for root, dirs, files in os.walk(path):
+        # Create a prefix variable with the folder structure inside the path folder.
+        # So if a file is at the path directory will be at the root directory of the zip file
+        # so the prefix will be empty. If the file belongs to a containing folder of path folder
+        # then the prefix will be that folder.
+        if root.replace(path,'') == '' and not prefix:
+                prefix = ''
+
+        else:
+                # Keep the folder structure after the path folder, append a '/' at the end
+                # and remome the first character, if it is a '/' in order to have a path like
+                # folder1/folder2/file.txt
+                prefix = root.replace(path, '') + '/'
+                if (prefix[0] == '/'):
+                        prefix = prefix[1:]
+        for filename in files:
+                actual_file_path = root + '/' + filename
+                zipped_file_path = prefix + filename
+                zipf.write( actual_file_path, zipped_file_path)
+
 def create_app():
   app = Flask(__name__)
   app.config.from_object('config')
@@ -217,14 +241,21 @@ def add_version(username):
             if os.path.isdir(dirname):
                 shutil.rmtree(dirname)
             os.mkdir(dirname)
-            filename = os.path.join(os.path.join(app.config['UPLOAD_FOLDER'],addon.name+request.form["versionnumb"]), filename)
+            #dirname = os.path.join(dirname, addon.name + request.form["versionnumb"])
+            #os.mkdir(dirname)
+            filename = os.path.join(dirname, filename)
 
             file.save(filename)
-
+            os.chdir(dirname)
             # Unzip (or un7zip) the file
             with zipfile.ZipFile(filename, 'r') as myzip:
-                fname = myzip.extractall(path=dirname)
-            filename = os.path.splitext(filename)[0]+"/"
+                for file in myzip.namelist():
+                    dir = file.split("/")[0]
+                    myzip.extract(file,path=dirname)
+            # rename folder
+            print(dir)
+            os.rename(dir,addon.name+request.form["versionnumb"])
+            filename = os.path.join(dirname,dir)
             #return jsonify({"err":fname.filename})
         elif request.form["sourcetype"] == "githubupl":
             print("Uploading from github")
@@ -235,6 +266,8 @@ def add_version(username):
             dirname = os.path.join(app.config['UPLOAD_FOLDER'], addon.name + request.form["versionnumb"])
             if os.path.isdir(dirname):
                 shutil.rmtree(dirname)
+            os.mkdir(dirname)
+            dirname = os.path.join(dirname, addon.name + request.form["versionnumb"])
             os.mkdir(dirname)
             repo = git.Repo.init(dirname)
             origin = repo.create_remote('origin', repoapi["git_url"])
@@ -268,13 +301,66 @@ def add_version(username):
                         z.extract(item,path=dirname)
                         if item == "addons-src-master/"+request.form["import-folder"]+"/":
                             filename = os.path.join(dirname,item)
+            os.remove(dirname+"/addons.zip")
+            print(filename)
+            os.rename(filename, os.path.join(dirname,addon.name + request.form["versionnumb"]))
+            filename = os.path.join(dirname, addon.name + request.form["versionnumb"])
+
         else:
             return jsonify({"err": "Source unknown!"})
-
+        version = AddonVersion()
+        version.addon = addon
+        olddir  = os.getcwd()
+        q = AddonVersion.query.filter_by(addon=addon).order_by(AddonVersion.int_version.desc())
+        if q.first().int_version == None:
+            version.int_version = 1
+        else:
+            version.int_version = q.first().int_version + 1
         #### File is now uploaded #### => if managed mode it's nearly done, else check for md5 hash, version number
+        if addon.automaticmode:
+            os.chdir(filename)
+            version.version = request.form["versionnumb"]
+            version.author = addon.author
+            version.license = addon.license
+            # create .nfo file
+            f = open(os.path.join(filename,"addon.nfo"),"w")
+            f.write(version.generateNFO())
+            f.close()
+            print(version.generateNFO())
+        else:
+            # Check for NFO File in directory
+            os.chdir(filename)
+            if len(glob.glob("*.nfo")) == 0:
+                return jsonify({"err":"No .nfo file was found!"})
+            if len(glob.glob("*.nfo")) > 1:
+                return jsonify({"err": "Too many .nfo files were found!"})
+            nfofile = glob.glob("*.nfo")[0]
+            print(nfofile)
+            f = open(nfofile,"r")
+            fcon = ("".join(f.readlines()))
+            # Use grumbel's sexpr to parse the file
+            try:
+                x = sexpr.parse(fcon)
+            except Exception:
+                return jsonify({"err":"The nfo file seems to be poorly formatted. (Please recheck)"})
+            for elem in x:
+                if elem[0] == "version":
+                    version.version = elem[1]
+                if elem[0] == "license":
+                    version.license = elem[1]
+                if elem[0] == "author":
+                    version.author = elem[1]
 
-        print(filename)
+        # Internal version number was set
+        print(version.int_version)
         # Finally zip and 7z the addon
+        # Return to "main" directory
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        print(filename)
+        zipf = zipfile.ZipFile('addons/%s_%s.zip'%(addon.name,version.int_version), 'w', zipfile.ZIP_DEFLATED)
+        zipdir(filename+"/..", zipf)
+        zipf.close()
+
         return "ok"
     # Check if user exists available
     user = User.query.filter_by(nickname=username).first()
