@@ -61,7 +61,10 @@
                 // File and / or repositories should be ok
 
                 // Check if at least one version was selected
-                var selectedVersion = $("#version-select option:selected");
+                var selectedVersion = $("#version-select option:selected").toArray().map(function(x){
+                    return x.value;
+                });
+                alert(selectedVersion.toString());
                 if(selectedVersion.length == 0)
                 {
                     formerror("You must select at least one compatible supertux version.");
@@ -77,6 +80,7 @@
                     return;
                 }
                 $("#sourcetype").val(selected);
+                $("#version-selected").val(selectedVersion);
                 console.log("Ok!");
                     var formData = new FormData($(this)[0]);
                 formData["selected"] = selected;
@@ -201,7 +205,9 @@
         {% endfor %}
     </select>
     </p>
-    <input type="hidden" name="sourcetype" id="sourcetype" />
+    <input type="hidden" name="version-selected" id="sourcetype" />
+        <input type="hidden" name="version-selected" id="sourcetype" />
+
     <input type="submit" class="btn btn-warning" value="Publish new Version"></input>
     </form>
     {% endif %}

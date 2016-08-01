@@ -255,7 +255,7 @@ def add_version(username):
             # rename folder
             print(dir)
             os.rename(dir,addon.name+request.form["versionnumb"])
-            filename = os.path.join(dirname,dir)
+            filename = os.path.join(dirname,addon.name+request.form["versionnumb"])
             #return jsonify({"err":fname.filename})
         elif request.form["sourcetype"] == "githubupl":
             print("Uploading from github")
@@ -360,6 +360,18 @@ def add_version(username):
         zipf = zipfile.ZipFile('addons/%s_%s.zip'%(addon.name,version.int_version), 'w', zipfile.ZIP_DEFLATED)
         zipdir(filename+"/..", zipf)
         zipf.close()
+        # Add file
+        f = AddonFiles()
+        f.addonvers = version
+        f.format = "zip"
+        f.path = zipf.filename
+
+        db.session.add(version)
+        db.session.add(f)
+
+        # Add supported Versions
+
+        db.session.commit()
 
         return "ok"
     # Check if user exists available

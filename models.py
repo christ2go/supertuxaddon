@@ -58,7 +58,7 @@ class AddonVersion(db.Model):
     license = db.Column(db.String(60))
     author = db.Column(db.String(60))
     int_version = db.Column(db.Integer)
-    files = db.relationship('AddonFiles', backref='addon',lazy='dynamic')
+    files = db.relationship('AddonFiles', backref='addonvers',lazy='dynamic')
 
     def generateNFO(self):
         if not self.addon.automaticmode:
@@ -77,13 +77,19 @@ class AddonVersion(db.Model):
 class AddonFiles(db.Model):
     __tablename__ = "addon_files"
     id = db.Column(db.Integer, primary_key=True)
-    addon_id =db.Column(db.Integer,db.ForeignKey('addon_version.id'))
+    addonvers_id =db.Column(db.Integer,db.ForeignKey('addon_version.id'))
     format = db.Column(db.String(20)) # File extension
     path = db.Column(db.String(40))
+
+supported_versions = db.Table('supported_versions',
+    db.Column('addon_version_id', db.Integer, db.ForeignKey('addon_version.id')),
+    db.Column('super_tux_version_id', db.Integer, db.ForeignKey('super_tux_versions.id'))
+)
+
 class SuperTuxVersions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     version = db.Column(db.String(10))
-
+    addons = db.relationship('AddonVersion', secondary=supported_versions,backref=db.backref('supported', lazy='dynamic'))
 
 
 
