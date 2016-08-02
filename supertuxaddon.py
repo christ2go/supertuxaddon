@@ -1,4 +1,4 @@
-from flask import Flask, render_template, flash, redirect, request, url_for, session,g,jsonify
+from flask import Flask, render_template, flash, redirect, request, url_for, session,g,jsonify,make_response,send_from_directory,send_file
 from werkzeug import secure_filename
 from flask import Flask
 from flask_bootstrap import Bootstrap
@@ -18,7 +18,16 @@ import requests, io
 import sexpr
 import git
 import glob
+import hashlib
+import subprocess
+import time
 
+def md5(fname):
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 def zipdir(path, zipf,prefix=""):
     # Iterate all the directories and files
     for root, dirs, files in os.walk(path):
@@ -224,6 +233,7 @@ def add_version(username):
         if db.session.query(AddonVersion,Addon).filter(Addon.user == g.user).filter(AddonVersion.version == request.form["versionnumb"]).first() != None:
             return jsonify({"err": "Version exists!"})
         pprint(request.form)
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
         # Upload from the datasource into directory tmp/:username/
         if request.form["sourcetype"] == "http":
             if 'addonfile' not in request.files:
@@ -255,7 +265,9 @@ def add_version(username):
             # rename folder
             print(dir)
             os.rename(dir,addon.name+request.form["versionnumb"])
-            filename = os.path.join(dirname,addon.name+request.form["versionnumb"])
+            filename = dirname
+            print("Uploaded")
+            print(filename)
             #return jsonify({"err":fname.filename})
         elif request.form["sourcetype"] == "githubupl":
             print("Uploading from github")
@@ -316,9 +328,11 @@ def add_version(username):
             version.int_version = 1
         else:
             version.int_version = q.first().int_version + 1
+        print("Generating .nfo file")
         #### File is now uploaded #### => if managed mode it's nearly done, else check for md5 hash, version number
         if addon.automaticmode:
             os.chdir(filename)
+            print("Generating ... ")
             version.version = request.form["versionnumb"]
             version.author = addon.author
             version.license = addon.license
@@ -329,10 +343,13 @@ def add_version(username):
             print(version.generateNFO())
         else:
             # Check for NFO File in directory
+            print("Searching for .nfo file")
             os.chdir(filename)
             if len(glob.glob("*.nfo")) == 0:
+                print("No .nfo file was found")
                 return jsonify({"err":"No .nfo file was found!"})
             if len(glob.glob("*.nfo")) > 1:
+                print("Too many .nfo files were found")
                 return jsonify({"err": "Too many .nfo files were found!"})
             nfofile = glob.glob("*.nfo")[0]
             print(nfofile)
@@ -342,6 +359,7 @@ def add_version(username):
             try:
                 x = sexpr.parse(fcon)
             except Exception:
+                print("Bad format!")
                 return jsonify({"err":"The nfo file seems to be poorly formatted. (Please recheck)"})
             for elem in x:
                 if elem[0] == "version":
@@ -350,21 +368,23 @@ def add_version(username):
                     version.license = elem[1]
                 if elem[0] == "author":
                     version.author = elem[1]
-
+        print("Done here!")
         # Internal version number was set
         print(version.int_version)
         # Finally zip and 7z the addon
         # Return to "main" directory
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        print("******* CREATING ZIP FILE ***********")
         print(filename)
-        zipf = zipfile.ZipFile('addons/%s_%s.zip'%(addon.name,version.int_version), 'w', zipfile.ZIP_DEFLATED)
-        zipdir(filename+"/..", zipf)
-        zipf.close()
+        os.chdir(filename)
+        subprocess.call(["zip", "-X", "-r", "--quiet", '%s_%s.zip'%(addon.name,version.int_version), "."], cwd=filename)
+        time.sleep(4)
+        shutil.copy('%s_%s.zip'%(addon.name,version.int_version), os.path.join(os.path.dirname(os.path.realpath(__file__)),'addons/%s_%s.zip'%(addon.name,version.int_version)))
         # Add file
         f = AddonFiles()
         f.addonvers = version
         f.format = "zip"
-        f.path = zipf.filename
+        f.path = 'addons/%s_%s.zip'%(addon.name,version.int_version)
 
         db.session.add(version)
         db.session.add(f)
@@ -372,7 +392,12 @@ def add_version(username):
         # Add supported Versions
 
         db.session.commit()
-
+        for aversion in request.form["versions-selected"].split(","):
+            svers = SuperTuxVersions.query.filter_by(version=aversion).first()
+            if svers != None:
+                svers.addons.append(version)
+                db.session.add(svers)
+        db.session.commit()
         return "ok"
     # Check if user exists available
     user = User.query.filter_by(nickname=username).first()
@@ -399,7 +424,67 @@ def add_version(username):
     addons =user.addons.all()
     return render_template("addon/update.html", **locals())
 
+######
+# Routes for handling addon download
+######
+@app.route("/servenfo/<version>")
+def serveNfo(version):
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    svers = SuperTuxVersions.query.filter_by(version=version).first()
+    addons = {} # Save addon with highest version
+    for addon in svers.addons:
+        nick = addon.addon.name
+        print(nick)
+        print(addon.int_version)
+        if addons.get(nick,None):
+            if addon.int_version > addons[nick].int_version:
+                addons[nick] = addon
+        else:
+            addons[nick] = addon
+    # Build nfo entries for every addon in dictionary
+    nfo = "(supertux-addons"
+    for key in addons.keys():
+        # Find file
+        file = addons[key].files[0]
+        print(file.path)
+        nfo += "\n\t(supertux-addoninfo "
+        nfo += "\n\t   (id \"%s\") " % (addons[key].addon.name)
+        nfo += "\n\t   (type \"%s\") "%(addons[key].addon.typeToSring())
+        nfo += "\n\t   (version %d)"%(addons[key].int_version)
+        nfo += "\n\t   (title \"%s\")"%(addons[key].addon.title)
+        nfo += "\n\t   (author \"%s\")"%(addons[key].author)
+        nfo += "\n\t   (license \"%s\")"%(addons[key].license)
+        nfo += "\n\t   (md5 \"%s\")"%(md5(file.path))
+        nfo += "\n\t   (url \"%s\")"%(url_for("serveAddon",nick=addons[key].addon.name,sversion=addons[key].int_version,_external=True))
+        #nfo += "\n\t   (url \"%s\")"%(url_for("serveAddon",nick=addons[key].addon.name,sversion=],_external=True))
+        nfo += "\n\t)"
+    nfo += ")"
+    print(nfo)
+    response = make_response(nfo)
+    # This is the key: Set the right header for the response
+    # to be downloaded, instead of just printed on the browser
+    response.headers["Content-Disposition"] = "attachment; filename=index_%s.txt"%(version)
+    response.headers["Content-Type"] = "text/rtf"
+    return response
 
+@app.route("/serveaddon/<nick>/<sversion>")
+def serveAddon(nick,sversion):
+    sversion = int(sversion)
+    addon = Addon.query.filter_by(name=nick).first()
+    if addon == None:
+        return "error"
+    for version in addon.versions:
+        print(sversion)
+        print(version.int_version)
+        if version.int_version == sversion:
+            print("Found version")
+            file = version.files[0]
+            print(file.path)
+            print(file.path.split("/")[1])
+            #
+            return send_file(file.path,attachment_filename=file.path.split("/")[1],as_attachment=True)
+
+    return "ok"
 
 if __name__ == '__main__':
     app.run(debug=True,port=8080)

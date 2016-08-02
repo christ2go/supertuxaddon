@@ -1,0 +1,3 @@
+Addon website for supertux
+==========================
+This is a (unofficial) addon website for the supertux game. It's written in python3, and uses the flask library.

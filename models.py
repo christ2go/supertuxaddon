@@ -47,7 +47,11 @@ class Addon(db.Model):
         elif self.type == TypeEnum.languagepack:
             return "lpack"
         return str(self.type)
-
+    def typeToSring(self):
+        if self.type == "world":
+            return "worldmap"
+        if self.type == "languagepack":
+            return "languagepack"
 
 
 class AddonVersion(db.Model):

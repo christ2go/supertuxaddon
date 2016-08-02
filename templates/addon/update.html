@@ -80,7 +80,7 @@
                     return;
                 }
                 $("#sourcetype").val(selected);
-                $("#version-selected").val(selectedVersion);
+                $("#versions-selected").val(selectedVersion);
                 console.log("Ok!");
                     var formData = new FormData($(this)[0]);
                 formData["selected"] = selected;
@@ -90,7 +90,21 @@
                         data: formData,
                         async: false,
                         success: function (data) {
-                            alert(data);
+                            if(data == "ok")
+                            {
+                               BootstrapDialog.alert({
+                                    title: 'Published!',
+                                    message: "The new addon version has been published successfully!",
+                                    type: BootstrapDialog.TYPE_SUCCESS});
+
+                            }else{
+                                data = JSON.parse(data);
+                                if(data["err"])
+                                {
+                                    formerror(data[err]);
+                                }
+                            }
+
                             console.log(data);
                         },
                         cache: false,
@@ -205,8 +219,8 @@
         {% endfor %}
     </select>
     </p>
-    <input type="hidden" name="version-selected" id="sourcetype" />
-        <input type="hidden" name="version-selected" id="sourcetype" />
+    <input type="hidden" name="sourcetype" id="sourcetype" />
+        <input type="hidden" name="versions-selected" id="versions-selected" />
 
     <input type="submit" class="btn btn-warning" value="Publish new Version"></input>
     </form>
