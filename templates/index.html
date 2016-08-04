@@ -18,5 +18,9 @@
     <h2>Importing addons</h2>
     If you want to access addons from the addon index in game, you can do that by pointing the Addonurl at one of the following
     urls (It must the appropriate one for your version):
-
+    <ul>
+    {% for version in versions %}
+        <li>{{ version[0] }}: <a href="{{ version[1] }}">{{ version[1] }}</a> </li>
+    {% endfor %}
+    </ul>
 {%- endblock %}

@@ -90,6 +90,8 @@
                         data: formData,
                         async: false,
                         success: function (data) {
+                                                            console.log(data);
+
                             if(data == "ok")
                             {
                                BootstrapDialog.alert({
@@ -98,11 +100,8 @@
                                     type: BootstrapDialog.TYPE_SUCCESS});
 
                             }else{
-                                data = JSON.parse(data);
-                                if(data["err"])
-                                {
-                                    formerror(data[err]);
-                                }
+
+                                    formerror(data["err"]);
                             }
 
                             console.log(data);
@@ -195,6 +194,18 @@
             <option value="{{ dir }}">{{ dir }}</option>
         {% endfor %}
     </select>
+  <p>
+      Please note, that when using classic mode the id given in the description must match the addons id the addon system.
+      You can however select, that the addon id will automatically be set. If you want to enable this, please select this option.
+      <div class="form-group">
+                    <label for="checkbox1 ">
+                        Automatically set addon id to the correct value. If the values differ and you haven't selected this
+                        option, you will be informed of the error occurring.
+                    </label>
+                    <input type="checkbox" id="correctId" name="correctId">
+
+                </div>
+  </p>
   </div>
   <div id="githubupl" class="tab-pane fade">
     <h3>Upload from your github repo</h3>
@@ -221,7 +232,13 @@
     </p>
     <input type="hidden" name="sourcetype" id="sourcetype" />
         <input type="hidden" name="versions-selected" id="versions-selected" />
+    <h3>Version description</h3>
+    <div class="form-group">
+        <label for="description"> Please make a <b>short</b> description, what changes you made. </label>
+        <textarea class="form-control" name="description" id="description">
 
+        </textarea>
+    </div>
     <input type="submit" class="btn btn-warning" value="Publish new Version"></input>
     </form>
     {% endif %}

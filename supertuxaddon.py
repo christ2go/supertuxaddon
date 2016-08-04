@@ -21,6 +21,8 @@ import glob
 import hashlib
 import subprocess
 import time
+from flask import Markup
+import markdown
 
 def md5(fname):
     hash_md5 = hashlib.md5()
@@ -91,7 +93,10 @@ def load_user():
 
 @app.route('/')
 def index():
-    return render_template("index.html")
+    versions = []
+    for version in SuperTuxVersions.query.all():
+        versions.append([version.version,url_for('serveNfo',version=version.version,_external=True)])
+    return render_template("index.html",**locals())
 """
 Function used for logging in with github
 """
@@ -197,6 +202,15 @@ def isavailable():
     rv = False
     #if Addon.query
     return jsonify({"rv":rv})
+@app.route('/_deleteAddon')
+def delAddon():
+    id = request.args.get('deleteId', None, type=int)
+    ad = Addon.query.filter_by(user=g.user,id=id).first_or_404()
+
+    db.session.delete(ad)
+    db.session.commit()
+    return jsonify({"succ":True})
+    #if Addon.query
 
 @app.route("/user/<username>")
 def user(username):
@@ -207,8 +221,8 @@ def user(username):
         redirect(url_for("index"))
     test = ""
     tstr = ""
-
-    return render_template("user/user.html", addons=user.addons.all(),username = username)
+    avatar = github.get("user")["avatar_url"]
+    return render_template("user/user.html", addons=user.addons.all(),username = username,imageurl=avatar)
 
     return test
 
@@ -264,7 +278,8 @@ def add_version(username):
                     myzip.extract(file,path=dirname)
             # rename folder
             print(dir)
-            os.rename(dir,addon.name+request.form["versionnumb"])
+            os.remove(filename)
+            #os.rename(dir,addon.name+request.form["versionnumb"])
             filename = dirname
             print("Uploaded")
             print(filename)
@@ -323,6 +338,7 @@ def add_version(username):
         version = AddonVersion()
         version.addon = addon
         olddir  = os.getcwd()
+        version.changes = request.form.get("description","")
         q = AddonVersion.query.filter_by(addon=addon).order_by(AddonVersion.int_version.desc())
         if q.first().int_version == None:
             version.int_version = 1
@@ -332,6 +348,8 @@ def add_version(username):
         #### File is now uploaded #### => if managed mode it's nearly done, else check for md5 hash, version number
         if addon.automaticmode:
             os.chdir(filename)
+            if len(glob.glob("*.nfo")) != 0:
+                return jsonify({"err":"A .nfo file was found in this addon. Please delete it (a .nfo file will be generated.)"})
             print("Generating ... ")
             version.version = request.form["versionnumb"]
             version.author = addon.author
@@ -343,6 +361,7 @@ def add_version(username):
             print(version.generateNFO())
         else:
             # Check for NFO File in directory
+
             print("Searching for .nfo file")
             os.chdir(filename)
             if len(glob.glob("*.nfo")) == 0:
@@ -355,19 +374,35 @@ def add_version(username):
             print(nfofile)
             f = open(nfofile,"r")
             fcon = ("".join(f.readlines()))
+
+            # Redo is used for indicating, that the .nfo file will have to be rewritten
+            redo = False
             # Use grumbel's sexpr to parse the file
             try:
                 x = sexpr.parse(fcon)
             except Exception:
                 print("Bad format!")
                 return jsonify({"err":"The nfo file seems to be poorly formatted. (Please recheck)"})
-            for elem in x:
+            for elem in x[0]:
+                print(elem)
                 if elem[0] == "version":
                     version.version = elem[1]
                 if elem[0] == "license":
                     version.license = elem[1]
                 if elem[0] == "author":
                     version.author = elem[1]
+                if elem[0] == "id":
+                    print(elem)
+                    if not addon.name == elem[1]:
+                        if request.form.get("correctId") == "on":
+                            redo = True
+                        else:
+                            return jsonify({"err":"The id in the .nfo file must match %s"%(addon.name)})
+            if redo:
+                # Overwrite version info
+                f = open(nfofile,"w")
+                f.write(version.generateNFO())
+                f.close()
         print("Done here!")
         # Internal version number was set
         print(version.int_version)
@@ -485,6 +520,20 @@ def serveAddon(nick,sversion):
             return send_file(file.path,attachment_filename=file.path.split("/")[1],as_attachment=True)
 
     return "ok"
+
+@app.route("/<username>/<addon>")
+def showAddon(username,addon):
+    # Find addon by username + addon combination
+    addon = Addon.query.filter_by(name=addon).first()
+    if addon == None or not addon.user == User.query.filter_by(nickname=username).first():
+        flash("No such addon found!",category="danger")
+        return redirect(url_for("index"))
+    # Addon exists => Show information on latest released version, etc ...
+    print(addon.description)
+    descr = Markup(markdown.markdown(addon.description,extensions=['markdown.extensions.nl2br']))
+    versions = AddonVersion.query.filter_by(addon=addon).order_by(AddonVersion.int_version.desc())
+
+    return render_template("addon/viewaddon.html",**locals())
 
 if __name__ == '__main__':
     app.run(debug=True,port=8080)

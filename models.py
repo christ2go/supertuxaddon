@@ -40,7 +40,11 @@ class Addon(db.Model):
 
     def setUser(self,u):
         self.user_id = u.id
-
+    def getAuthorName(self):
+        if self.author:
+            return self.author
+        else:
+            return self.user.nickname
     def getType(self):
         if self.type == TypeEnum.world:
             return "world"
@@ -65,8 +69,10 @@ class AddonVersion(db.Model):
     files = db.relationship('AddonFiles', backref='addonvers',lazy='dynamic')
 
     def generateNFO(self):
-        if not self.addon.automaticmode:
-            return None
+        license = self.getLicense()
+        author = self.getAuthor()
+        #if not self.addon.automaticmode:
+        #    return None
         nfo = """
         (supertux-addoninfo
           (id "%s")
@@ -76,8 +82,28 @@ class AddonVersion(db.Model):
           (author "%s")
           (license "%s"))
 
-        """%(self.addon.name,self.int_version,str(self.addon.type),self.addon.title,self.addon.author,self.addon.license)
+        """%(self.addon.name,self.int_version,str(self.addon.type),self.addon.title,author,license)
+
         return nfo
+
+    def getAuthor(self):
+        author = ""
+        if self.license != None:
+            author = self.author
+        else:
+            author = self.addon.author
+        if author == None:
+            author = "Unknown"
+        return author
+    def getLicense(self):
+        license = ""
+        if self.license != None:
+            license = self.license
+        else:
+            license = self.addon.license
+        return license
+
+
 class AddonFiles(db.Model):
     __tablename__ = "addon_files"
     id = db.Column(db.Integer, primary_key=True)

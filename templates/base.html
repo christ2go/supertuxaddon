@@ -90,7 +90,6 @@
                    <li><a href="{{ url_for('user',username=g.user.nickname) }}"><i class="fa fa-user"></i> Profile Page</a> </li>
                    <li><a href="{{ url_for('add_addon') }}"><i class="fa fa-plus"></i> Publish an addon</a></li>
                   <li><a href="{{ url_for('add_version',username=g.user.nickname)}}"><i class="fa fa-refresh"></i> Add a new version of an existing addon</a></li>
-                    <li><a href="#"><i class="fa fa-eraser"></i>Delete an addon</a></li>
                   {% else %}
                         You need to be logged in, to see these.
                     {% endif %}
