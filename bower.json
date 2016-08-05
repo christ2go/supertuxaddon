@@ -6,7 +6,7 @@
   "description": "",
   "main": "",
   "license": "GPL",
-  "homepage": "",
+  "homepage": "https://github.com/christ2go/supertuxaddon",
   "private": true,
   "ignore": [
     "**/.*",
@@ -18,6 +18,14 @@
   "dependencies": {
     "speakingurl": "^9.0.0",
     "bootstrap-select": "^1.10.0",
-    "parsleyjs": "^2.4.3"
+    "parsleyjs": "^2.4.3",
+    
+    "bootstrap": "^3.*",
+    "jquery2": "*",
+    "bootstrap-switch": "*",
+    "bootstrap-filestyle": "*",
+    "bootstrap3-dialog": "*",
+    "components-font-awesome": "*",
+    "awesome-bootstrap-checkbox": "*"
   }
 }

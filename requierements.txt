@@ -1,0 +1,9 @@
+flask
+flask_bootstrap
+flask_sqlalchemy
+github-flask
+flask-bower
+slugify
+requests
+gitpython
+markdown
