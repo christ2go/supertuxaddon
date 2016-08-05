@@ -468,6 +468,8 @@ def serveNfo(version):
     svers = SuperTuxVersions.query.filter_by(version=version).first()
     addons = {} # Save addon with highest version
     for addon in svers.addons:
+        if not addon.addon:
+            continue
         nick = addon.addon.name
         print(nick)
         print(addon.int_version)
